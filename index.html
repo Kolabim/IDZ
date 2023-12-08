@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Хрестики-нулики</title>
+        <style>
+            .board {
+                display: grid;
+                grid-template-columns: repeat(3, 100px);
+                grid-gap: 5px;
+            }
+            .cell {
+                width: 100px;
+                height: 100px;
+                border: 1px solid #ccc;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 24px;
+                cursor: pointer;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Хрестики-нулики</h1>
+        <div id="game" class="board"></div>
+        <div id="status"></div>
+        <div>
+            <button onclick="startGame(true)">Нова гра з ботом</button>
+            <button onclick="startGame(false)">Нова гра без бота</button>
+        </div>
+        <div>
+            <p>Лічильник ігор: <span id="gamesCount">0</span></p>
+            <p>Результати:</p>
+            <ul id="results"></ul>
+        </div>
+
+        <script>
+            let currentPlayer = "X";
+            let gameOver = false;
+            let moves = 0;
+            let gameWithBot = false;
+            let gamesCount = 0;
+            let resultsList = document.getElementById("results");
+
+            const board = document.getElementById("game");
+            const statusDisplay = document.getElementById("status");
+            const gamesCountDisplay = document.getElementById("gamesCount");
+
+            function createCell(row, col) {
+                const cell = document.createElement("div");
+                cell.classList.add("cell");
+                cell.dataset.row = row;
+                cell.dataset.col = col;
+                cell.addEventListener("click", handleCellClick);
+                return cell;
+            }
+
+            function initializeBoard() {
+                for (let row = 0; row < 3; row++) {
+                    for (let col = 0; col < 3; col++) {
+                        board.appendChild(createCell(row, col));
+                    }
+                }
+            }
+
+            function startGame(withBot) {
+                gameWithBot = withBot;
+                resetGame();
+                board.querySelectorAll(".cell").forEach(cell => {
+                    cell.addEventListener("click", handleCellClick);
+                });
+                statusDisplay.textContent = withBot
+                    ? "Гра з ботом: Черга гравця X"
+                    : "Гра без бота: Черга гравця X";
+                if (withBot && currentPlayer === "O") {
+                    setTimeout(handleBotMove, 500);
+                }
+            }
+
+            function handleWinningCells(winningCells) {
+                winningCells.forEach(cell => {
+                    cell.style.color = "red";
+                    cell.style.fontWeight = "bold";
+                });
+            }
+
+            function checkWin() {
+                const cells = document.querySelectorAll(".cell");
+
+                const winCombinations = [
+                    [0, 1, 2],
+                    [3, 4, 5],
+                    [6, 7, 8],
+                    [0, 3, 6],
+                    [1, 4, 7],
+                    [2, 5, 8],
+                    [0, 4, 8],
+                    [2, 4, 6]
+                ];
+
+                for (const combination of winCombinations) {
+                    const [a, b, c] = combination;
+                    if (
+                        cells[a].textContent !== "" &&
+                        cells[a].textContent === cells[b].textContent &&
+                        cells[a].textContent === cells[c].textContent
+                    ) {
+                        handleWinningCells([cells[a], cells[b], cells[c]]);
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+
+            function resetBoardStyles() {
+                const cells = document.querySelectorAll(".cell");
+                cells.forEach(cell => {
+                    cell.style.color = "";
+                    cell.style.fontWeight = "";
+                });
+            }
+
+            function resetGame() {
+                const cells = document.querySelectorAll(".cell");
+                cells.forEach(cell => {
+                    cell.textContent = "";
+                });
+                resetBoardStyles();
+                currentPlayer = "X";
+                gameOver = false;
+                moves = 0;
+                statusDisplay.textContent = gameWithBot
+                    ? "Гра з ботом: Початок нової гри!"
+                    : "Гра без бота: Початок нової гри!";
+            }
+
+            function handleBotMove() {
+                const emptyCells = Array.from(
+                    document.querySelectorAll(".cell")
+                ).filter(cell => cell.textContent === "");
+                const randomIndex = Math.floor(
+                    Math.random() * emptyCells.length
+                );
+                const botMove = emptyCells[randomIndex];
+
+                if (botMove) {
+                    botMove.textContent = currentPlayer;
+                    moves++;
+
+                    if (checkWin()) {
+                        gameOver = true;
+                        updateResults(`Гравець ${currentPlayer} переміг!`);
+                    } else if (moves === 9) {
+                        gameOver = true;
+                        updateResults("Гра закінчилась в нічию!");
+                    } else {
+                        currentPlayer = currentPlayer === "X" ? "O" : "X";
+                        statusDisplay.textContent = `Черга гравця ${currentPlayer}`;
+                    }
+                }
+            }
+
+            function handleCellClick(event) {
+                if (gameOver) return;
+
+                const cell = event.target;
+                if (cell.textContent === "") {
+                    cell.textContent = currentPlayer;
+                    moves++;
+
+                    if (checkWin()) {
+                        gameOver = true;
+                        updateResults(`Гравець ${currentPlayer} переміг!`);
+                    } else if (moves === 9) {
+                        gameOver = true;
+                        updateResults("Гра закінчилась в нічию!");
+                    } else {
+                        currentPlayer = currentPlayer === "X" ? "O" : "X";
+                        statusDisplay.textContent = `Черга гравця ${currentPlayer}`;
+
+                        if (gameWithBot && currentPlayer === "O" && !gameOver) {
+                            setTimeout(handleBotMove, 100);
+                        }
+                    }
+                }
+            }
+
+            function updateResults(result) {
+                gamesCount++;
+                gamesCountDisplay.textContent = gamesCount;
+
+                const resultItem = document.createElement("li");
+                resultItem.textContent = `Гра ${gamesCount} ${
+                    gameWithBot ? "з ботом" : ""
+                }: ${result}`;
+                resultsList.appendChild(resultItem);
+            }
+
+            initializeBoard();
+        </script>
+    </body>
+</html>
